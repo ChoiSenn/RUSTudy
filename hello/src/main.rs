@@ -2,18 +2,30 @@ use std::{
     fs,
     io::{prelude::*, BufReader},
     net::{TcpListener, TcpStream},
+    thread,
+    time::Duration,
 };
+use hello::ThreadPool;
 
 fn main() {
     // TcpListener를 이용하여 해당 주소에서 TCP 연결 수신 대기
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
+    let pool = ThreadPool::new(4);
 
     // TcpListener의 incoming 메서드는 스트림 시퀀스를 제공하는 반환자를 반환.
-    for stream in listener.incoming() {
+    for stream in listener.incoming().take(2) {
         let stream = stream.unwrap();
 
-        handle_connection(stream);
+        // // 새 스레드를 생성한 다음 새 스레드의 클로저에서 코드를 실행.
+        // thread::spawn(|| {
+        //     handle_connection(stream);
+        // });
+        // 스레드 대신 스레드 풀 생성. 
+        pool.execute(|| {
+            handle_connection(stream);
+        });
     }
+    println!("Shutting down.");
 }
 
 fn handle_connection(mut stream: TcpStream) {
